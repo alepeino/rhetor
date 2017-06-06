@@ -151,6 +151,13 @@ abstract class Resource
         return [];
     }
 
+    public static function all()
+    {
+        return array_map(function ($attributes) {
+            return new static($attributes);
+        }, (new static())->queryDriver->fetchAll());
+    }
+
     public static function find($id)
     {
         try {

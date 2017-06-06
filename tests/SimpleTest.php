@@ -24,4 +24,24 @@ class SimpleTest extends AbstractTestCase
 
         $this->assertNull(Post::findOrFail(48));
     }
+
+    public function testAll()
+    {
+        $response = Post::all();
+
+        $this->assertCount(2, $response);
+        $this->assertEquals('Post 1', $response[0]->title);
+        $this->assertEquals('Post 2', $response[1]->title);
+    }
+
+    public function testAllFails()
+    {
+        $this->expectException(ResourceNotFoundException::class);
+
+        $resource = new class () extends Post {
+            protected $elementName = 'not-exists';
+        };
+
+        $resource::all();
+    }
 }

@@ -52,7 +52,9 @@ class RestQueryDriver implements QueryDriver
 
     public function fetchAll()
     {
-        // TODO: Implement fetchAll() method.
+        $response = $this->doRequest($this->options['RETRIEVE_METHOD']);
+
+        return $response;
     }
 
     public function doRequest($method)
