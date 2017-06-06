@@ -3,7 +3,7 @@ namespace Alepeino\Rhetor;
 
 use PHPUnit\Framework\TestCase;
 
-class AbstractTestCase extends TestCase
+abstract class AbstractTestCase extends TestCase
 {
 
 }
