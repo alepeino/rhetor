@@ -2,10 +2,11 @@
 namespace Alepeino\Rhetor;
 
 use Alepeino\Rhetor\Drivers\RestQueryDriver;
+use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-abstract class Resource
+abstract class Resource implements Jsonable
 {
     protected $driver = 'REST';
     private $queryDriver;
@@ -73,6 +74,11 @@ abstract class Resource
     public function getInstancePath()
     {
         return $this->instancePath;
+    }
+
+    public function exists()
+    {
+        return Arr::exists($this->attributes, $this->getKeyName());
     }
 
     public function getAttributes()
@@ -151,6 +157,14 @@ abstract class Resource
         return [];
     }
 
+    public function update($attributes)
+    {
+        $this->fill($attributes);
+        $response = $this->queryDriver->put();
+
+        return $this->fill($response);
+    }
+
     public static function all()
     {
         return array_map(function ($attributes) {
@@ -180,6 +194,21 @@ abstract class Resource
         }
 
         return $instance->fill($attributes)->refresh();
+    }
+
+    public static function create($attributes)
+    {
+        return (new static())->update($attributes);
+    }
+
+    public function toJson($options = 0)
+    {
+        return json_encode($this->attributes, $options);
+    }
+
+    public function __toString()
+    {
+        return $this->toJson();
     }
 
     public function __get($key)

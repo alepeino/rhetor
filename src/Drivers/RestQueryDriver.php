@@ -5,6 +5,8 @@ use Alepeino\Rhetor\ResourceNotFoundException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use LogicException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Zttp\Zttp;
 
 class RestQueryDriver implements QueryDriver
@@ -30,6 +32,7 @@ class RestQueryDriver implements QueryDriver
 
     public function getResourceEndpoint()
     {
+        // TODO query string params
         return $this->replaceUriPlaceholders(
             collect([
                 $this->resource->getSite(),
@@ -57,12 +60,20 @@ class RestQueryDriver implements QueryDriver
         return $response;
     }
 
+    public function put()
+    {
+        $method = $this->options[$this->resource->exists() ? 'UPDATE_METHOD' : 'CREATE_METHOD'];
+        $response = $this->doRequest($method);
+
+        return $response;
+    }
+
     public function doRequest($method)
     {
         return $this->resolveResponse(
             Zttp::bodyFormat($this->options['bodyFormat'])
                 ->withHeaders($this->options['headers'])
-                ->$method($this->resource->getEndpoint()));
+                ->$method($this->resource->getEndpoint(), $this->resource->getAttributes()));
     }
 
     public function resolveResponse($response)
@@ -73,6 +84,8 @@ class RestQueryDriver implements QueryDriver
                     get_class($this->resource),
                     $this->resource->getKey()
                 );
+        } elseif ($response->status() >= 400) {
+            throw new HttpException($response->status(), Response::$statusTexts[$response->status()]);
         }
 
         switch ($this->options['responseFormat']) {
@@ -83,7 +96,7 @@ class RestQueryDriver implements QueryDriver
 
     protected function getResourceInstancePath()
     {
-        return $this->resource->{$this->resource->getKeyName()}
+        return $this->resource->exists()
             ? ($this->resource->getInstancePath() ?: "{{$this->resource->getKeyName()}}")
             : "";
     }

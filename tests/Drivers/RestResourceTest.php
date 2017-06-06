@@ -1,9 +1,12 @@
 <?php
-namespace Alepeino\Rhetor;
+namespace Alepeino\Rhetor\Drivers;
 
+use Alepeino\Rhetor\AbstractTestCase;
+use Alepeino\Rhetor\ResourceNotFoundException;
 use Alepeino\Rhetor\Resources\Post;
+use Alepeino\Rhetor\TestServer;
 
-class SimpleTest extends AbstractTestCase
+class RestResourceTest extends AbstractTestCase
 {
     use TestServer;
 
@@ -43,5 +46,26 @@ class SimpleTest extends AbstractTestCase
         };
 
         $resource::all();
+    }
+
+    public function testCreate()
+    {
+        $post = Post::create(['title' => 'New post title', 'body' => 'The body']);
+
+        $this->assertNotNull($post->id);
+        $this->assertEquals('New post title', $post->title);
+
+        $this->assertCount(3, Post::all());
+    }
+
+    public function testUpdate()
+    {
+        $post = Post::find(1);
+
+        $post->update(['title' => 'Updated title']);
+        $this->assertNotNull($post->id);
+        $this->assertEquals('Updated title', $post->title);
+
+        $this->assertCount(2, Post::all());
     }
 }

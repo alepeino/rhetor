@@ -18,6 +18,20 @@ trait TestServer
         static::killTestServer();
     }
 
+    public function setUp()
+    {
+        parent::setUp();
+
+        static::seedLocalData();
+    }
+
+    public function tearDown()
+    {
+        parent::tearDown();
+
+        static::deleteLocalStorage();
+    }
+
     protected static function startTestServer()
     {
         $host_and_port = 'localhost:'.getenv('TEST_SERVER_PORT');

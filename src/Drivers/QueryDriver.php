@@ -10,4 +10,6 @@ interface QueryDriver
     public function fetchOne();
 
     public function fetchAll();
+
+    public function put();
 }
