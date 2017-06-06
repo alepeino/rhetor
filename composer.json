@@ -1,0 +1,29 @@
+{
+    "name": "alepeino/rhetor",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Alejandro Peinó",
+            "email": "alepeino@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Alepeino\\Rhetor\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Alepeino\\Rhetor\\": "tests/"
+        }
+    },
+    "require": {
+        "kitetail/zttp": "^0.1.0",
+        "illuminate/support": "5.*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.2",
+        "laravel/lumen-framework": "^5.4",
+        "symfony/process": "^3.3"
+    }
+}
