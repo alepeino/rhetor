@@ -55,33 +55,33 @@ class RestEndpointBuilderTest extends AbstractTestCase
         $this->assertEquals('http://example.com/stuff/xx', $resource->getEndpoint());
     }
 
-    public function testInstanceUriWithMultipleAttributes()
+    public function testIdentifierWithMultipleAttributes()
     {
         $resource = new class () extends Resource {
             protected $site = 'http://example.com';
-            protected $elementName = 'article';
-            protected $instancePath = '/{id}/{slug}';
+            protected $elementName = 'articles';
+            protected $identifier = '/{id}/{slug}';
         };
 
         $resource->id = 2;
         $resource->slug = 'article-title-slug';
 
-        $this->assertEquals('http://example.com/article/2/article-title-slug', $resource->getEndpoint());
+        $this->assertEquals('http://example.com/articles/2/article-title-slug', $resource->getEndpoint());
     }
 
-    public function testInstanceUriWithMultipleAttributesAndNonDefaultPrimaryKey()
+    public function testIdentifierWithMultipleAttributesAndNonDefaultPrimaryKey()
     {
         $resource = new class () extends Resource {
             protected $site = 'http://example.com';
-            protected $elementName = 'article';
-            protected $instancePath = '/{date}/{slug}';
+            protected $elementName = 'articles';
+            protected $identifier = '/{date}/{slug}';
             protected $primaryKey = 'slug';
         };
 
         $resource->slug = 'article-title-slug';
         $resource->date = '2017-05-04';
 
-        $this->assertEquals('http://example.com/article/2017-05-04/article-title-slug', $resource->getEndpoint());
+        $this->assertEquals('http://example.com/articles/2017-05-04/article-title-slug', $resource->getEndpoint());
     }
 
     public function testInstanceWithUndefinedAttributeInPathThrowsException()
@@ -91,11 +91,38 @@ class RestEndpointBuilderTest extends AbstractTestCase
         $resource = new class () extends Resource {
             protected $host = 'example.com';
             protected $path = '/posts';
-            protected $instancePath = '/{id}/{slug}';
+            protected $identifier = '/{id}/{slug}';
         };
 
         $resource->id = 2;
         $resource->getEndpoint();
+    }
+
+    public function testQueryStringIdentifier()
+    {
+        $resource = new class () extends Resource {
+            protected $site = 'http://example.com';
+            protected $elementName = 'articles';
+            protected $identifier = '?id={id}';
+        };
+
+        $resource->id = 2;
+
+        $this->assertEquals('http://example.com/articles?id=2', $resource->getEndpoint());
+    }
+
+    public function testIdentifierWithMultipleAttributesInQueryString()
+    {
+        $resource = new class () extends Resource {
+            protected $site = 'http://example.com';
+            protected $elementName = 'articles';
+            protected $identifier = '?id={id}&slug={slug}';
+        };
+
+        $resource->id = 2;
+        $resource->slug = 'article-title-slug';
+
+        $this->assertEquals('http://example.com/articles?id=2&slug=article-title-slug', $resource->getEndpoint());
     }
 }
 

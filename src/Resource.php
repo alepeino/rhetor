@@ -16,7 +16,7 @@ abstract class Resource implements Jsonable
     protected $elementName;
 
     protected $primaryKey = 'id';
-    protected $instancePath;
+    protected $identifier;
 
     protected $attributes = [];
     protected $relations = [];
@@ -71,9 +71,9 @@ abstract class Resource implements Jsonable
         return $this->getAttribute($this->getKeyName());
     }
 
-    public function getInstancePath()
+    public function getIdentifier()
     {
-        return $this->instancePath;
+        return $this->identifier;
     }
 
     public function exists()

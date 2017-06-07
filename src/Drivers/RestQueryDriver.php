@@ -32,18 +32,10 @@ class RestQueryDriver implements QueryDriver
 
     public function getResourceEndpoint()
     {
-        // TODO query string params
-        return $this->replaceUriPlaceholders(
-            collect([
-                $this->resource->getSite(),
-                $this->resource->getElementName() ?: Str::lower(Str::plural(class_basename($this->resource))),
-                $this->getResourceInstancePath(),
-            ])
-                ->filter()
-                ->map(function ($segment) {
-                    return trim($segment, '/');
-                })
-                ->implode('/'));
+        return trim($this->resource->getSite(), '/')
+            . '/'
+            . trim($this->resource->getElementName() ?: Str::lower(Str::plural(class_basename($this->resource))), '/')
+            . $this->getResourceIdentifier();
     }
 
     public function fetchOne()
@@ -73,7 +65,11 @@ class RestQueryDriver implements QueryDriver
         return $this->resolveResponse(
             Zttp::bodyFormat($this->options['bodyFormat'])
                 ->withHeaders($this->options['headers'])
-                ->$method($this->resource->getEndpoint(), $this->resource->getAttributes()));
+                ->$method(
+                    $this->resource->getEndpoint(),
+                    Str::lower($method) == 'get' ? [] : $this->resource->getAttributes()
+                )
+        );
     }
 
     public function resolveResponse($response)
@@ -94,21 +90,38 @@ class RestQueryDriver implements QueryDriver
         }
     }
 
-    protected function getResourceInstancePath()
+    private function getResourceIdentifier()
     {
         return $this->resource->exists()
-            ? ($this->resource->getInstancePath() ?: "{{$this->resource->getKeyName()}}")
+            ? $this->replaceUriPlaceholders(
+                ($this->resource->getIdentifier() ?: "/{{$this->resource->getKeyName()}}"))
             : "";
     }
 
-    protected function replaceUriPlaceholders($uri)
+    private function replaceUriPlaceholders($identifier)
     {
-        return preg_replace_callback('/{(.+?)}/', function ($match) {
-            if (! ($replacement = $this->resource->getAttribute($match[1]))) {
-                throw new LogicException("Attribute [{$match[1]}] not defined on resource.");
-            }
+        switch ($identifier[0]) {
+            case '/':
+                return preg_replace_callback('/{(.+?)}/', [$this, 'getResourceMatchedAttribute'], $identifier);
+            case '?':
+                preg_match_all('/(?:[\?&]?(.+?))={(.+?)}/', $identifier, $matches, PREG_SET_ORDER);
+                $query = array_reduce($matches, function ($q, $match) {
+                    array_shift($match);
+                    $q[$match[0]] = $this->getResourceMatchedAttribute($match);
+                    return $q;
+                }, []);
+                return '?'.http_build_query($query);
+            default:
+                return $identifier;
+        }
+    }
 
-            return $replacement;
-        }, $uri);
+    private function getResourceMatchedAttribute($match)
+    {
+        if (! ($setAttribute = $this->resource->getAttribute($match[1]))) {
+            throw new LogicException("Attribute [{$match[1]}] not defined on resource.");
+        }
+
+        return $setAttribute;
     }
 }
