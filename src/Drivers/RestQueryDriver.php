@@ -44,14 +44,14 @@ class RestQueryDriver implements QueryDriver
 
     public function fetchOne()
     {
-        $response = $this->doRequest($this->options['RETRIEVE_METHOD']);
+        $response = $this->doRequest($this->options['RETRIEVE_METHOD'], $this->resource->getEndpoint());
 
         return $response;
     }
 
     public function fetchAll()
     {
-        $response = $this->doRequest($this->options['RETRIEVE_METHOD']);
+        $response = $this->doRequest($this->options['RETRIEVE_METHOD'], $this->resource->getEndpoint());
 
         return $response;
     }
@@ -59,20 +59,17 @@ class RestQueryDriver implements QueryDriver
     public function put()
     {
         $method = $this->options[$this->resource->exists() ? 'UPDATE_METHOD' : 'CREATE_METHOD'];
-        $response = $this->doRequest($method);
+        $response = $this->doRequest($method, $this->resource->getEndpoint(), $this->resource->getAttributes());
 
         return $response;
     }
 
-    public function doRequest($method)
+    public function doRequest($method, $url, $params = [])
     {
         return $this->resolveResponse(
             Zttp::bodyFormat($this->options['bodyFormat'])
                 ->withHeaders($this->options['headers'])
-                ->$method(
-                    $this->resource->getEndpoint(),
-                    Str::lower($method) == 'get' ? [] : $this->resource->getAttributes()
-                )
+                ->$method($url, $params)
         );
     }
 
