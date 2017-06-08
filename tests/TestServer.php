@@ -49,7 +49,12 @@ trait TestServer
         }
 
         static::killTestServer();
-        static::markTestSkipped('Could not run test server on '.static::class.'.');
+        static::markTestSkipped(
+            vsprintf(
+                'Could not run test server on %s for test %.',
+                [$host_and_port, static::class]
+            )
+        );
     }
 
     protected static function killTestServer()
