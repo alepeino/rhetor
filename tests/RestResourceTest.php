@@ -1,10 +1,8 @@
 <?php
-namespace Alepeino\Rhetor\Drivers;
+namespace Alepeino\Rhetor;
 
-use Alepeino\Rhetor\AbstractTestCase;
-use Alepeino\Rhetor\ResourceNotFoundException;
 use Alepeino\Rhetor\Resources\Post;
-use Alepeino\Rhetor\TestServer;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class RestResourceTest extends AbstractTestCase
 {
