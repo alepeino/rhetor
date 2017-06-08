@@ -19,8 +19,6 @@ class RestQueryDriver implements QueryDriver
         'UPDATE_METHOD' => 'PUT',
         'DELETE_METHOD' => 'DELETE',
         'bodyFormat' => 'json',
-        'responseFormat' => 'json',
-        'resolutionAccessor' => null,
         'headers' => [],
     ];
 
@@ -66,14 +64,14 @@ class RestQueryDriver implements QueryDriver
 
     public function doRequest($method, $url, $params = [])
     {
-        return $this->resolveResponse(
+        return $this->handleResponse(
             Zttp::bodyFormat($this->options['bodyFormat'])
                 ->withHeaders($this->options['headers'])
                 ->$method($url, $params)
         );
     }
 
-    public function resolveResponse($response)
+    public function handleResponse($response)
     {
         if ($response->status() == '404') {
             throw new ResourceNotFoundException(get_class($this->resource), $this->resource->getKey() ?: []);
@@ -81,10 +79,22 @@ class RestQueryDriver implements QueryDriver
             throw new HttpException($response->status(), Response::$statusTexts[$response->status()]);
         }
 
-        switch ($this->options['responseFormat']) {
+        switch (Arr::get($this->options, 'responseContentType', explode(';', $response->header('Content-Type'))[0])) {
             case 'json':
-                return Arr::get($response->json(), $this->options['resolutionAccessor']);
+            case 'application/json':
+                return $this->resolveResponse($response->json());
+            case 'text/xml':
+                $xml = simplexml_load_string($response->body());
+                $data = json_decode(json_encode($xml), true);
+                return $this->resolveResponse($data);
+            default:
+                return $this->resolveResponse($response);
         }
+    }
+
+    public function resolveResponse($responseData)
+    {
+        return Arr::get($responseData, Arr::get($this->options, 'resolutionAccessor'));
     }
 
     private function getResourceIdentifier()
