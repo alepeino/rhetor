@@ -1,6 +1,7 @@
 <?php
 namespace Alepeino\Rhetor;
 
+use Alepeino\Rhetor\Drivers\QueryDriver;
 use Alepeino\Rhetor\Drivers\RestQueryDriver;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
@@ -8,8 +9,8 @@ use Illuminate\Support\Str;
 
 abstract class Resource implements Jsonable
 {
-    protected $driver = 'REST';
-    private $queryDriver;
+    protected $driverClass = RestQueryDriver::class;
+    private $driver;
     protected $driverOptions = [];
 
     protected $site;
@@ -23,13 +24,29 @@ abstract class Resource implements Jsonable
 
     public function __construct($attributes = [])
     {
-        switch ($this->driver) {
-            case 'REST':
-                $this->queryDriver = new RestQueryDriver($this, $this->driverOptions);
-            break;
-        }
-
         $this->fill($attributes);
+        $this->config();
+    }
+
+    public function config()
+    {
+        $this->setDriver(new $this->driverClass($this, $this->driverOptions));
+    }
+
+    /**
+     * @return \Alepeino\Rhetor\Drivers\QueryDriver
+     */
+    public function getDriver()
+    {
+        return $this->driver;
+    }
+
+    /**
+     * @param \Alepeino\Rhetor\Drivers\QueryDriver $driver
+     */
+    public function setDriver(QueryDriver $driver)
+    {
+        $this->driver = $driver;
     }
 
     public function fill($attributes = [])
@@ -43,12 +60,12 @@ abstract class Resource implements Jsonable
 
     public function refresh()
     {
-        return $this->fill($this->queryDriver->fetchOne());
+        return $this->fill($this->driver->fetchOne());
     }
 
     public function getEndpoint()
     {
-        return $this->queryDriver->getResourceEndpoint();
+        return $this->driver->getResourceEndpoint();
     }
 
     public function getSite()
@@ -160,7 +177,7 @@ abstract class Resource implements Jsonable
     public function update($attributes)
     {
         $this->fill($attributes);
-        $response = $this->queryDriver->put();
+        $response = $this->driver->put();
 
         return $this->fill($response);
     }
@@ -169,7 +186,7 @@ abstract class Resource implements Jsonable
     {
         return array_map(function ($attributes) {
             return new static($attributes);
-        }, (new static())->queryDriver->fetchAll());
+        }, (new static())->driver->fetchAll());
     }
 
     public static function find($id)
