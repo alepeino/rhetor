@@ -70,4 +70,32 @@ class RestResourceTest extends AbstractTestCase
 
         $this->assertCount(2, Post::all());
     }
+
+    public function testHttpException500()
+    {
+        try {
+            $resource = new class () extends Post {
+                protected $site = 'http://localhost:8999/status/500';
+                protected $elementName = 'posts';
+            };
+            $resource->all();
+            $this->fail('Should have got 500 code');
+        } catch (HttpException $e) {
+            $this->assertEquals(500, $e->getStatusCode());
+        }
+    }
+
+    public function testHttpException405()
+    {
+        try {
+            $resource = new class (['id' => 1]) extends Post {
+                protected $elementName = 'posts';
+                protected $driverOptions = ['UPDATE_METHOD' => 'POST'];
+            };
+            $resource->update(['title' => 'Should Fail']);
+            $this->fail('Should have got 405 code');
+        } catch (HttpException $e) {
+            $this->assertEquals(405, $e->getStatusCode());
+        }
+    }
 }
