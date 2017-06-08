@@ -1,10 +1,16 @@
 <?php
 namespace Alepeino\Rhetor;
 
+use Alepeino\Rhetor\Resources\Article;
 use Alepeino\Rhetor\Resources\User;
 
 class RestEndpointBuilderTest extends AbstractTestCase
 {
+    public function testStaticCall()
+    {
+        $this->assertEquals('https://example.com/articles', Article::getEndpoint());
+    }
+
     public function testExplicitName()
     {
         $resource = new class () extends Resource {
