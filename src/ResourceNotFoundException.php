@@ -25,9 +25,8 @@ class ResourceNotFoundException extends RuntimeException
      *
      * @param  string  $resource
      * @param  int|array  $ids
-     * @return $this
      */
-    public function setResource($resource, $ids = [])
+    public function __construct($resource, $ids = [])
     {
         $this->resource = $resource;
         $this->ids = is_array($ids) ? $ids : [$ids];
@@ -48,7 +47,7 @@ class ResourceNotFoundException extends RuntimeException
      *
      * @return string
      */
-    public function getModel()
+    public function getResource()
     {
         return $this->resource;
     }

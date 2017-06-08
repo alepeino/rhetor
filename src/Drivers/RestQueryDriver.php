@@ -75,11 +75,7 @@ class RestQueryDriver implements QueryDriver
     public function resolveResponse($response)
     {
         if ($response->status() == '404') {
-            throw (new ResourceNotFoundException())
-                ->setResource(
-                    get_class($this->resource),
-                    $this->resource->getKey()
-                );
+            throw new ResourceNotFoundException(get_class($this->resource), $this->resource->getKey() ?: []);
         } elseif ($response->status() >= 400) {
             throw new HttpException($response->status(), Response::$statusTexts[$response->status()]);
         }

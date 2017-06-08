@@ -23,9 +23,13 @@ class RestResourceTest extends AbstractTestCase
 
     public function testFindOrFailFails()
     {
-        $this->expectException(ResourceNotFoundException::class);
-
-        $this->assertNull(Post::findOrFail(48));
+        try {
+            Post::findOrFail(48);
+            $this->fail();
+        } catch (ResourceNotFoundException $e) {
+           $this->assertEquals([48], $e->getIds());
+           $this->assertEquals(Post::class, $e->getResource());
+        }
     }
 
     public function testAll()
