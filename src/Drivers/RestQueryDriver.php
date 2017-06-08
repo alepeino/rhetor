@@ -32,10 +32,14 @@ class RestQueryDriver implements QueryDriver
 
     public function getResourceEndpoint()
     {
-        return trim($this->resource->getSite(), '/')
+        $trimSlash = function ($s) { return trim($s, '/'); };
+
+        return $trimSlash(
+            $trimSlash($this->resource->getSite())
             . '/'
-            . trim($this->resource->getElementName() ?: Str::lower(Str::plural(class_basename($this->resource))), '/')
-            . $this->getResourceIdentifier();
+            . $trimSlash($this->resource->getElementName() ?? Str::lower(Str::plural(class_basename($this->resource))))
+            . $this->getResourceIdentifier()
+        );
     }
 
     public function fetchOne()
@@ -90,8 +94,8 @@ class RestQueryDriver implements QueryDriver
     {
         return $this->resource->exists()
             ? $this->replaceUriPlaceholders(
-                ($this->resource->getIdentifier() ?: "/{{$this->resource->getKeyName()}}"))
-            : "";
+                ($this->resource->getIdentifier() ?? "/{{$this->resource->getKeyName()}}"))
+            : '';
     }
 
     private function replaceUriPlaceholders($identifier)
