@@ -6,7 +6,7 @@ $app = new Laravel\Lumen\Application(realpath(__DIR__.'/../'));
 
 $app->get('/', function () { return response('OK'); });
 
-$app->get('/status/{status}[/{_}]', function ($status) { return response('', $status); });
+$app->get('/status/{status}[/{_:.*}]', function ($status) { return response('', $status); });
 
 $app->get('/posts', function () {
     return \Alepeino\Rhetor\AbstractTestCase::getStoredData('posts');

@@ -74,11 +74,11 @@ class RestResourceTest extends AbstractTestCase
     public function testHttpException500()
     {
         try {
-            $resource = new class () extends Post {
+            $resource = new class (['id' => 1]) extends Post {
                 protected $site = 'http://localhost:8999/status/500';
                 protected $elementName = 'posts';
             };
-            $resource->all();
+            $resource->refresh();
             $this->fail('Should have got 500 code');
         } catch (HttpException $e) {
             $this->assertEquals(500, $e->getStatusCode());
