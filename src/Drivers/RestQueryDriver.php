@@ -27,7 +27,7 @@ class RestQueryDriver implements QueryDriver
     public function __construct(\Alepeino\Rhetor\Resource $resource, $options = [])
     {
         $this->resource = $resource;
-        $this->options = array_merge_recursive($this->options, $options);
+        $this->options = Arr::merge($this->options, $options);
     }
 
     public function getResourceEndpoint()

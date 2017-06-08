@@ -10,7 +10,10 @@
     "autoload": {
         "psr-4": {
             "Alepeino\\Rhetor\\": "src/"
-        }
+        },
+        "files": [
+            "src/setup.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
