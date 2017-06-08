@@ -24,10 +24,10 @@ class RestQueryDriver implements QueryDriver
         'headers' => [],
     ];
 
-    public function __construct(\Alepeino\Rhetor\Resource $resource, $options = [])
+    public function __construct(\Alepeino\Rhetor\Resource $resource, $extraOptions = [])
     {
         $this->resource = $resource;
-        $this->options = Arr::merge($this->options, $options);
+        $this->options = Arr::merge($this->options, $resource->getDriverOptions(), $extraOptions);
     }
 
     public function getResourceEndpoint()

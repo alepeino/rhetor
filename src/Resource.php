@@ -7,10 +7,21 @@ use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
+/**
+ * Delegated "magic" methods:
+ *
+ * @method static string getEndpoint()
+ * @method \Alepeino\Rhetor\Drivers\QueryDriver getDriver()
+ * @method static \Alepeino\Rhetor\Resource create($attributes)
+ * @method static \Alepeino\Rhetor\Resource find($id)
+ * @method static \Alepeino\Rhetor\Resource findOrFail($id)
+ * @method static \Alepeino\Rhetor\Resource[] all()
+ */
 abstract class Resource implements Jsonable
 {
+    protected $queryBuilder;
+
     protected $driverClass = RestQueryDriver::class;
-    private $driver;
     protected $driverOptions = [];
 
     protected $site;
@@ -25,60 +36,29 @@ abstract class Resource implements Jsonable
     public function __construct($attributes = [])
     {
         $this->fill($attributes);
-        $this->config();
     }
 
-    public function config()
+    public function getDriverClass(): string
     {
-        $this->setDriver(new $this->driverClass($this, $this->driverOptions));
+        return $this->driverClass;
     }
 
-    /**
-     * @return \Alepeino\Rhetor\Drivers\QueryDriver
-     */
-    public function getDriver()
+    public function getDriverOptions(): array
     {
-        return $this->driver;
+        return $this->driverOptions;
     }
 
-    /**
-     * @param \Alepeino\Rhetor\Drivers\QueryDriver $driver
-     */
-    public function setDriver(QueryDriver $driver)
-    {
-        $this->driver = $driver;
-    }
-
-    public function fill($attributes = [])
-    {
-        foreach ($attributes as $key => $value) {
-            $this->setAttribute($key, $value);
-        }
-
-        return $this;
-    }
-
-    public function refresh()
-    {
-        return $this->fill($this->driver->fetchOne());
-    }
-
-    public function getEndpoint()
-    {
-        return $this->driver->getResourceEndpoint();
-    }
-
-    public function getSite()
+    public function getSite(): ?string
     {
         return $this->site;
     }
 
-    public function getElementName()
+    public function getElementName(): ?string
     {
         return $this->elementName;
     }
 
-    public function getKeyName()
+    public function getKeyName(): ?string
     {
         return $this->primaryKey;
     }
@@ -88,17 +68,17 @@ abstract class Resource implements Jsonable
         return $this->getAttribute($this->getKeyName());
     }
 
-    public function getIdentifier()
+    public function getIdentifier(): ?string
     {
         return $this->identifier;
     }
 
-    public function exists()
+    public function exists(): bool
     {
         return Arr::exists($this->attributes, $this->getKeyName());
     }
 
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->attributes;
     }
@@ -120,7 +100,7 @@ abstract class Resource implements Jsonable
         return $this->getRelationValue($key);
     }
 
-    public function setAttribute($key, $value)
+    public function setAttribute($key, $value): self
     {
         if ($this->hasSetMutator($key)) {
             $method = 'set'.Str::studly($key).'Attribute';
@@ -149,17 +129,17 @@ abstract class Resource implements Jsonable
         }
     }
 
-    public function relationLoaded($key)
+    public function relationLoaded($key): bool
     {
         return Arr::exists($this->relations, $key);
     }
 
-    public function hasGetMutator($key)
+    public function hasGetMutator($key): bool
     {
         return method_exists($this, 'get'.Str::studly($key).'Attribute');
     }
 
-    public function hasSetMutator($key)
+    public function hasSetMutator($key): bool
     {
         return method_exists($this, 'get'.Str::studly($key).'Attribute');
     }
@@ -174,56 +154,50 @@ abstract class Resource implements Jsonable
         return [];
     }
 
-    public function update($attributes)
+    public function update($attributes): self
     {
-        $this->fill($attributes);
-        $response = $this->driver->put();
-
-        return $this->fill($response);
+        return $this->fill($attributes)->save();
     }
 
-    public static function all()
+    public function fill($attributes = []): self
     {
-        return array_map(function ($attributes) {
-            return new static($attributes);
-        }, (new static())->driver->fetchAll());
-    }
-
-    public static function find($id)
-    {
-        try {
-            return static::findOrFail($id);
-        } catch (ResourceNotFoundException $e) {
-            return null;
-        }
-    }
-
-    public static function findOrFail($id)
-    {
-        $instance = new static();
-
-        if (is_array($id)) {
-            $attributes = $id;
-        } else {
-            $attributes = [
-                $instance->getKeyName() => $id,
-            ];
+        foreach ($attributes as $key => $value) {
+            $this->setAttribute($key, $value);
         }
 
-        return $instance->fill($attributes)->refresh();
+        return $this;
     }
 
-    public static function create($attributes)
+    public function save(): self
     {
-        return (new static())->update($attributes);
+        $updated = $this->getBuilder()->save();
+
+        return $this->fill($updated);
     }
 
-    public function toJson($options = 0)
+    public function refresh(): self
+    {
+        $updated = $this->getBuilder()->fetch();
+
+        return $this->fill($updated);
+    }
+
+    protected function getBuilder(): QueryBuilder
+    {
+        return $this->queryBuilder ?: $this->queryBuilder = new QueryBuilder($this);
+    }
+
+    public function setBuilder($builder)
+    {
+        return $this->queryBuilder = $builder;
+    }
+
+    public function toJson($options = 0): string
     {
         return json_encode($this->attributes, $options);
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return $this->toJson();
     }
@@ -236,5 +210,37 @@ abstract class Resource implements Jsonable
     public function __set($key, $value)
     {
         $this->setAttribute($key, $value);
+    }
+
+    /**
+     * Handle dynamic method calls into the corresponding builder method.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        $builder = count($parameters) && $parameters[0] instanceof QueryBuilder
+            ? array_shift($parameters)
+            : $this->getBuilder();
+
+        return $builder->$method(...$parameters);
+    }
+
+    /**
+     * Handle dynamic static method calls into the corresponding builder method.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public static function __callStatic($method, $parameters)
+    {
+        $builder = count($parameters) && $parameters[0] instanceof QueryBuilder
+            ? array_shift($parameters)
+            : (new static())->getBuilder();
+
+        return $builder->$method(...$parameters);
     }
 }
