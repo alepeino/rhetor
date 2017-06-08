@@ -115,7 +115,13 @@ abstract class Resource implements Jsonable
 
     public function getAttributeValue($key)
     {
-        return $this->getAttributeFromArray($key);
+        $value = $this->getAttributeFromArray($key);
+
+        if ($this->hasGetMutator($key)) {
+            return $this->mutateAttribute($key, $value);
+        }
+
+        return $value;
     }
 
     public function getRelationValue($key)
@@ -141,7 +147,12 @@ abstract class Resource implements Jsonable
 
     public function hasSetMutator($key): bool
     {
-        return method_exists($this, 'get'.Str::studly($key).'Attribute');
+        return method_exists($this, 'set'.Str::studly($key).'Attribute');
+    }
+
+    protected function mutateAttribute($key, $value)
+    {
+        return $this->{'get'.Str::studly($key).'Attribute'}($value);
     }
 
     protected function getAttributeFromArray($key)
