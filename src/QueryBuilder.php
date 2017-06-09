@@ -1,16 +1,19 @@
 <?php
 namespace Alepeino\Rhetor;
 
+use Alepeino\Rhetor\Drivers\QueryDriver;
+use Illuminate\Support\Arr;
+
 class QueryBuilder
 {
     private $resource;
     private $driver;
+    private $constraints = [];
 
-    public function __construct(\Alepeino\Rhetor\Resource $resource)
+    public function __construct(\Alepeino\Rhetor\Resource $resource, QueryDriver $driver)
     {
-        $driverClass = $resource->getDriverClass();
-        $this->driver = new $driverClass($resource);
         $this->resource = $resource;
+        $this->driver = $driver;
     }
 
     public function create($attributes)
@@ -44,7 +47,9 @@ class QueryBuilder
             ];
         }
 
-        return $this->resource->fill($attributes)->refresh();
+        $data = $this->driver->fetchOne($this->resource->fill($attributes));
+
+        return $this->resolveData('find', $data);
     }
 
     public function save()
@@ -68,6 +73,17 @@ class QueryBuilder
     public function getDriver()
     {
         return $this->driver;
+    }
+
+    private function resolveData($method, $data)
+    {
+        $resourceMethod = 'resolve'.ucfirst($method).'Data';
+
+        if (method_exists($this->resource, $resourceMethod)) {
+            return $resourceMethod($data);
+        }
+
+        return $this->newResourceInstance($data);
     }
 
     private function newResourceInstance($attributes)

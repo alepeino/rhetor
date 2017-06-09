@@ -11,7 +11,6 @@ use Illuminate\Support\Str;
  * Delegated "magic" methods:
  *
  * @method static string getEndpoint()
- * @method \Alepeino\Rhetor\Drivers\QueryDriver getDriver()
  * @method static \Alepeino\Rhetor\Resource create($attributes)
  * @method static \Alepeino\Rhetor\Resource find($id)
  * @method static \Alepeino\Rhetor\Resource findOrFail($id)
@@ -23,6 +22,7 @@ abstract class Resource implements Jsonable
 
     protected $driverClass = RestQueryDriver::class;
     protected $driverOptions = [];
+    protected $driver;
 
     protected $site;
     protected $elementName;
@@ -36,16 +36,7 @@ abstract class Resource implements Jsonable
     public function __construct($attributes = [])
     {
         $this->fill($attributes);
-    }
-
-    public function getDriverClass(): string
-    {
-        return $this->driverClass;
-    }
-
-    public function getDriverOptions(): array
-    {
-        return $this->driverOptions;
+        $this->config();
     }
 
     public function getSite(): ?string
@@ -73,6 +64,18 @@ abstract class Resource implements Jsonable
         return $this->identifier;
     }
 
+    public function getDriver(): QueryDriver
+    {
+        return $this->driver;
+    }
+
+    public function setDriver($driver): self
+    {
+        $this->driver = $driver;
+
+        return $this;
+    }
+
     public function exists(): bool
     {
         return Arr::exists($this->attributes, $this->getKeyName());
@@ -85,10 +88,6 @@ abstract class Resource implements Jsonable
 
     public function getAttribute($key)
     {
-        if (! $key) {
-            return;
-        }
-
         if (Arr::exists($this->attributes, $key) || $this->hasGetMutator($key)) {
             return $this->getAttributeValue($key);
         }
@@ -111,58 +110,6 @@ abstract class Resource implements Jsonable
         $this->attributes[$key] = $value;
 
         return $this;
-    }
-
-    public function getAttributeValue($key)
-    {
-        $value = $this->getAttributeFromArray($key);
-
-        if ($this->hasGetMutator($key)) {
-            return $this->mutateAttribute($key, $value);
-        }
-
-        return $value;
-    }
-
-    public function getRelationValue($key)
-    {
-        if ($this->relationLoaded($key)) {
-            return $this->relations[$key];
-        }
-
-        if (method_exists($this, $key)) {
-            return $this->getRelationshipFromMethod($key);
-        }
-    }
-
-    public function relationLoaded($key): bool
-    {
-        return Arr::exists($this->relations, $key);
-    }
-
-    public function hasGetMutator($key): bool
-    {
-        return method_exists($this, 'get'.Str::studly($key).'Attribute');
-    }
-
-    public function hasSetMutator($key): bool
-    {
-        return method_exists($this, 'set'.Str::studly($key).'Attribute');
-    }
-
-    protected function mutateAttribute($key, $value)
-    {
-        return $this->{'get'.Str::studly($key).'Attribute'}($value);
-    }
-
-    protected function getAttributeFromArray($key)
-    {
-        return Arr::get($this->attributes, $key);
-    }
-
-    protected function getRelationshipFromMethod($method)
-    {
-        return [];
     }
 
     public function update($attributes): self
@@ -193,14 +140,66 @@ abstract class Resource implements Jsonable
         return $this->fill($updated);
     }
 
-    protected function getBuilder(): QueryBuilder
+    protected function getAttributeValue($key)
     {
-        return $this->queryBuilder ?: $this->queryBuilder = new QueryBuilder($this);
+        $value = $this->getAttributeFromArray($key);
+
+        if ($this->hasGetMutator($key)) {
+            return $this->mutateAttribute($key, $value);
+        }
+
+        return $value;
     }
 
-    public function setBuilder($builder)
+    protected function getRelationValue($key)
     {
-        return $this->queryBuilder = $builder;
+        if ($this->relationLoaded($key)) {
+            return $this->relations[$key];
+        }
+
+        if (method_exists($this, $key)) {
+            return $this->getRelationshipFromMethod($key);
+        }
+    }
+
+    protected function relationLoaded($key): bool
+    {
+        return Arr::exists($this->relations, $key);
+    }
+
+    protected function hasGetMutator($key): bool
+    {
+        return method_exists($this, 'get'.Str::studly($key).'Attribute');
+    }
+
+    protected function hasSetMutator($key): bool
+    {
+        return method_exists($this, 'set'.Str::studly($key).'Attribute');
+    }
+
+    protected function mutateAttribute($key, $value)
+    {
+        return $this->{'get'.Str::studly($key).'Attribute'}($value);
+    }
+
+    protected function getAttributeFromArray($key)
+    {
+        return Arr::get($this->attributes, $key);
+    }
+
+    protected function getRelationshipFromMethod($method)
+    {
+        return [];
+    }
+
+    protected function config()
+    {
+        $this->driver = new $this->driverClass($this->getDriverOptions());
+    }
+
+    protected function createBuilder()
+    {
+        return new QueryBuilder($this, $this->driver);
     }
 
     public function toJson($options = 0): string
@@ -232,11 +231,7 @@ abstract class Resource implements Jsonable
      */
     public function __call($method, $parameters)
     {
-        $builder = count($parameters) && $parameters[0] instanceof QueryBuilder
-            ? array_shift($parameters)
-            : $this->getBuilder();
-
-        return $builder->$method(...$parameters);
+        return $this->createBuilder()->$method(...$parameters);
     }
 
     /**
@@ -248,10 +243,12 @@ abstract class Resource implements Jsonable
      */
     public static function __callStatic($method, $parameters)
     {
-        $builder = count($parameters) && $parameters[0] instanceof QueryBuilder
-            ? array_shift($parameters)
-            : (new static())->getBuilder();
+        $instance = new static();
 
-        return $builder->$method(...$parameters);
+        if (count($parameters) && $parameters[0] instanceof QueryDriver) {
+            $instance->setDriver(array_shift($parameters));
+        }
+
+        return $instance->createBuilder()->$method(...$parameters);
     }
 }

@@ -3,11 +3,11 @@ namespace Alepeino\Rhetor\Drivers;
 
 interface QueryDriver
 {
-    public function __construct(\Alepeino\Rhetor\Resource $resource, $options = []);
+    public function __construct($options = []);
 
-    public function getResourceEndpoint();
+    public function getResourceEndpoint(\Alepeino\Rhetor\Resource $resource);
 
-    public function fetchOne();
+    public function fetchOne(\Alepeino\Rhetor\Resource $resource);
 
     public function fetchAll();
 
