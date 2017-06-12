@@ -130,5 +130,19 @@ class RestEndpointBuilderTest extends AbstractTestCase
 
         $this->assertEquals('http://example.com/articles?id=2&slug=article-title-slug', $resource->getEndpoint());
     }
+
+    public function testMixedIdentifier()
+    {
+        $resource = new class () extends Resource {
+            protected $site = 'http://example.com';
+            protected $elementName = 'articles';
+            protected $identifier = '/{id}?new={isNew}';
+        };
+
+        $resource->id = 2;
+        $resource->isNew = 1;
+
+        $this->assertEquals('http://example.com/articles/2?new=1', $resource->getEndpoint());
+    }
 }
 

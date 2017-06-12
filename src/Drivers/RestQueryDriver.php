@@ -125,10 +125,10 @@ class RestQueryDriver implements QueryDriver
 
     private function getResourceMatchedAttribute($match)
     {
-        if (! ($setAttribute = $this->resource->getAttribute($match[1]))) {
+        if (! ($matched = $this->resource->getAttribute($match[1]))) {
             throw new LogicException("Attribute [{$match[1]}] not defined on resource.");
         }
 
-        return $setAttribute;
+        return $matched;
     }
 }

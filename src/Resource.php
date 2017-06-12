@@ -1,7 +1,6 @@
 <?php
 namespace Alepeino\Rhetor;
 
-use Alepeino\Rhetor\Drivers\QueryDriver;
 use Alepeino\Rhetor\Drivers\RestQueryDriver;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
@@ -11,11 +10,11 @@ use Illuminate\Support\Str;
  * Delegated "magic" methods:
  *
  * @method static string getEndpoint()
- * @method \Alepeino\Rhetor\Drivers\QueryDriver getDriver()
  * @method static \Alepeino\Rhetor\Resource create($attributes)
  * @method static \Alepeino\Rhetor\Resource find($id)
  * @method static \Alepeino\Rhetor\Resource findOrFail($id)
  * @method static \Alepeino\Rhetor\Resource[] all()
+ * @method \Alepeino\Rhetor\Drivers\QueryDriver getDriver()
  */
 abstract class Resource implements Jsonable
 {
@@ -36,6 +35,34 @@ abstract class Resource implements Jsonable
     public function __construct($attributes = [])
     {
         $this->fill($attributes);
+    }
+
+    public function update($attributes): self
+    {
+        return $this->fill($attributes)->save();
+    }
+
+    public function fill($attributes = []): self
+    {
+        foreach ($attributes as $key => $value) {
+            $this->setAttribute($key, $value);
+        }
+
+        return $this;
+    }
+
+    public function save(): self
+    {
+        $updated = $this->getBuilder()->save();
+
+        return $this->fill($updated);
+    }
+
+    public function refresh(): self
+    {
+        $updated = $this->getBuilder()->fetch();
+
+        return $this->fill($updated);
     }
 
     public function getDriverClass(): string
@@ -163,34 +190,6 @@ abstract class Resource implements Jsonable
     protected function getRelationshipFromMethod($method)
     {
         return [];
-    }
-
-    public function update($attributes): self
-    {
-        return $this->fill($attributes)->save();
-    }
-
-    public function fill($attributes = []): self
-    {
-        foreach ($attributes as $key => $value) {
-            $this->setAttribute($key, $value);
-        }
-
-        return $this;
-    }
-
-    public function save(): self
-    {
-        $updated = $this->getBuilder()->save();
-
-        return $this->fill($updated);
-    }
-
-    public function refresh(): self
-    {
-        $updated = $this->getBuilder()->fetch();
-
-        return $this->fill($updated);
     }
 
     protected function getBuilder(): QueryBuilder
