@@ -28,6 +28,13 @@ class RestQueryDriver implements QueryDriver
         $this->options = Arr::merge($this->options, $resource->getDriverOptions(), $extraOptions);
     }
 
+    public function setResource(\Alepeino\Rhetor\Resource $resource): self
+    {
+        $this->resource = $resource;
+
+        return $this;
+    }
+
     public function getResourceEndpoint()
     {
         $trimSlash = function ($s) { return trim($s, '/'); };
@@ -42,14 +49,14 @@ class RestQueryDriver implements QueryDriver
 
     public function fetchOne()
     {
-        $response = $this->doRequest($this->options['RETRIEVE_METHOD'], $this->resource->getEndpoint());
+        $response = $this->doRequest($this->options['RETRIEVE_METHOD'], $this->getResourceEndpoint());
 
         return $response;
     }
 
-    public function fetchAll()
+    public function fetchMany()
     {
-        $response = $this->doRequest($this->options['RETRIEVE_METHOD'], $this->resource->getEndpoint());
+        $response = $this->doRequest($this->options['RETRIEVE_METHOD'], $this->getResourceEndpoint());
 
         return $response;
     }
@@ -57,7 +64,7 @@ class RestQueryDriver implements QueryDriver
     public function put()
     {
         $method = $this->options[$this->resource->exists() ? 'UPDATE_METHOD' : 'CREATE_METHOD'];
-        $response = $this->doRequest($method, $this->resource->getEndpoint(), $this->resource->getAttributes());
+        $response = $this->doRequest($method, $this->getResourceEndpoint(), $this->resource->getAttributes());
 
         return $response;
     }
@@ -82,19 +89,13 @@ class RestQueryDriver implements QueryDriver
         switch (Arr::get($this->options, 'responseContentType', explode(';', $response->header('Content-Type'))[0])) {
             case 'json':
             case 'application/json':
-                return $this->resolveResponse($response->json());
+                return $response->json();
             case 'text/xml':
                 $xml = simplexml_load_string($response->body());
-                $data = json_decode(json_encode($xml), true);
-                return $this->resolveResponse($data);
+                return json_decode(json_encode($xml), true);
             default:
-                return $this->resolveResponse($response);
+                return $response;
         }
-    }
-
-    public function resolveResponse($responseData)
-    {
-        return Arr::get($responseData, Arr::get($this->options, 'resolutionAccessor'));
     }
 
     private function getResourceIdentifier()

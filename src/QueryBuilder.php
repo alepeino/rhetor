@@ -1,6 +1,8 @@
 <?php
 namespace Alepeino\Rhetor;
 
+use Alepeino\Rhetor\Drivers\QueryDriver;
+
 class QueryBuilder
 {
     private $resource;
@@ -13,19 +15,22 @@ class QueryBuilder
         $this->resource = $resource;
     }
 
-    public function create($attributes)
+    public function create($attributes): \Alepeino\Rhetor\Resource
     {
-        return $this->resource->update($attributes);
+        $this->resource = $this->newResourceInstance($attributes);
+        $this->getDriver()->setResource($this->resource);
+
+        return $this->save();
     }
 
-    public function all()
+    public function all(): array
     {
         return array_map(function ($attributes) {
             return $this->newResourceInstance($attributes);
-        }, $this->driver->fetchAll());
+        }, $this->getDriver()->fetchMany());
     }
 
-    public function find($id)
+    public function find($id): ?\Alepeino\Rhetor\Resource
     {
         try {
             return $this->findOrFail($id);
@@ -34,43 +39,36 @@ class QueryBuilder
         }
     }
 
-    public function findOrFail($id)
+    public function findOrFail($id): \Alepeino\Rhetor\Resource
     {
-        if (is_array($id)) {
-            $attributes = $id;
-        } else {
-            $attributes = [
-                $this->resource->getKeyName() => $id,
-            ];
-        }
+        $this->resource->fill(is_array($id) ? $id : [$this->resource->getKeyName() => $id]);
+        $new_data = $this->resource->resolveFind($this->getDriver()->fetchOne());
 
-        return $this->resource->fill($attributes)->refresh();
+        return $this->resource->fill($new_data);
     }
 
-    public function save()
+    public function save(): \Alepeino\Rhetor\Resource
     {
-        return $this->driver->put();
+        $response = $this->getDriver()->put();
+
+        $new_data = $this->resource->exists()
+            ? $this->resource->resolveSave($response)
+            : $this->resource->resolveCreate($response);
+
+        return $this->resource->fill($new_data);
     }
 
-    public function fetch()
+    public function getEndpoint(): string
     {
-        return $this->driver->fetchOne();
+        return $this->getDriver()->getResourceEndpoint();
     }
 
-    public function getEndpoint()
-    {
-        return $this->driver->getResourceEndpoint();
-    }
-
-    /**
-     * @return \Alepeino\Rhetor\Drivers\QueryDriver
-     */
-    public function getDriver()
+    public function getDriver(): QueryDriver
     {
         return $this->driver;
     }
 
-    private function newResourceInstance($attributes)
+    private function newResourceInstance($attributes = []): \Alepeino\Rhetor\Resource
     {
         $resourceClass = get_class($this->resource);
 

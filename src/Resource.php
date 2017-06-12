@@ -60,9 +60,32 @@ abstract class Resource implements Jsonable
 
     public function refresh(): self
     {
-        $updated = $this->getBuilder()->fetch();
+        return $this->getBuilder()->find($this->primaryKey);
+    }
 
-        return $this->fill($updated);
+    public function resolveFind($data)
+    {
+        return $data;
+    }
+
+    public function resolveCreate($data)
+    {
+        return $data;
+    }
+
+    public function resolveSave($data)
+    {
+        return $data;
+    }
+
+    public function getBuilder(): QueryBuilder
+    {
+        return $this->queryBuilder ?: $this->queryBuilder = new QueryBuilder($this);
+    }
+
+    public function setBuilder($builder)
+    {
+        return $this->queryBuilder = $builder;
     }
 
     public function getDriverClass(): string
@@ -190,16 +213,6 @@ abstract class Resource implements Jsonable
     protected function getRelationshipFromMethod($method)
     {
         return [];
-    }
-
-    protected function getBuilder(): QueryBuilder
-    {
-        return $this->queryBuilder ?: $this->queryBuilder = new QueryBuilder($this);
-    }
-
-    public function setBuilder($builder)
-    {
-        return $this->queryBuilder = $builder;
     }
 
     public function toJson($options = 0): string
